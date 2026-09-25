@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BSE Comedy Atlas · Booking Binder</title>
+<style>
+:root{
+  --black:#08080A; --panel:#101013; --panel2:#16161a; --line:#26262c;
+  --red:#E01B24; --amber:#E8A33D; --gold:#C9A24A; --white:#EDEDEE; --dim:#8b8b93;
+  --green:#3fae5c;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--black);color:var(--white);font-family:'Barlow Condensed',Arial,sans-serif;}
+@font-face{font-family:'Oswald';src:local('Oswald');}
+h1,h2,h3,.mono{font-family:'Oswald',Arial,sans-serif;letter-spacing:.5px;}
+.code{font-family:'Courier New',monospace;}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:2px solid var(--red);background:linear-gradient(180deg,#0c0c0f,#08080a);}
+header h1{margin:0;font-size:22px;color:var(--gold);text-transform:uppercase;}
+header .sub{color:var(--dim);font-size:13px;}
+header .status{color:var(--green);font-size:12px;}
+.tabs{display:flex;gap:2px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;}
+.tab{padding:10px 18px;cursor:pointer;color:var(--dim);font-size:14px;text-transform:uppercase;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab.active{color:var(--amber);border-bottom-color:var(--red);}
+.wrap{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:calc(100vh - 100px);}
+main{padding:18px;overflow-x:auto;}
+aside{border-left:1px solid var(--line);padding:18px;background:var(--panel);}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.stat{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--red);padding:8px 14px;min-width:110px;}
+.stat .n{font-size:22px;color:var(--gold);font-family:'Oswald',Arial,sans-serif;}
+.stat .l{font-size:11px;color:var(--dim);text-transform:uppercase;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.chip{border:1px solid var(--line);color:var(--dim);padding:4px 10px;font-size:12px;cursor:pointer;border-radius:2px;text-transform:uppercase;}
+.chip.on{color:var(--black);background:var(--amber);border-color:var(--amber);}
+#mapwrap{position:relative;background:var(--panel);border:1px solid var(--line);margin-bottom:16px;}
+svg#usmap{width:100%;height:auto;display:block;}
+.pin{cursor:pointer;}
+.pin circle{stroke:#000;stroke-width:1;}
+.pin:hover circle{stroke:var(--white);}
+.pin text{font-size:9px;fill:var(--dim);font-family:'Barlow Condensed',Arial,sans-serif;pointer-events:none;}
+table{width:100%;border-collapse:collapse;font-size:14px;}
+th{text-align:left;color:var(--gold);border-bottom:1px solid var(--line);padding:6px 8px;font-size:12px;text-transform:uppercase;}
+td{padding:6px 8px;border-bottom:1px solid #1c1c20;vertical-align:top;}
+tr:hover td{background:#141417;}
+.badge{padding:2px 7px;font-size:10px;text-transform:uppercase;border-radius:2px;}
+.b-played{background:#1d3b26;color:#6fdc8c;}
+.b-warm{background:#3b2e14;color:var(--amber);}
+.b-pitch{background:#2a1414;color:#e88;}
+.b-open{background:#14202a;color:#7fc2e8;}
+.b-unclear{background:#232323;color:var(--dim);}
+.dossier h3{color:var(--amber);margin:0 0 4px;}
+.dossier .field{margin-bottom:10px;}
+.dossier .field label{display:block;color:var(--dim);font-size:11px;text-transform:uppercase;margin-bottom:2px;}
+.dossier .field div{font-size:13px;line-height:1.4;}
+.gap{background:#1a1010;border-left:3px solid var(--red);padding:10px 14px;margin-bottom:10px;font-size:13px;line-height:1.5;}
+.gap b{color:var(--amber);}
+a{color:var(--amber);}
+.footer-note{color:var(--dim);font-size:11px;margin-top:20px;border-top:1px solid var(--line);padding-top:10px;}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>BSE Comedy Atlas</h1>
+    <div class="sub">Billy Sorrells Entertainment — Booking Binder · Live Supabase feed</div>
+  </div>
+  <div id="liveStatus" class="status">● connecting…</div>
+</header>
+<div class="tabs">
+  <div class="tab active" data-tab="map">HUD Map</div>
+  <div class="tab" data-tab="rooms">Rooms</div>
+  <div class="tab" data-tab="bookers">Bookers / Contacts</div>
+  <div class="tab" data-tab="sponsors">Sponsors</div>
+  <div class="tab" data-tab="gaps">Brutal Gap Audit</div>
+</div>
+<div class="wrap">
+<main>
+
+  <div class="stats" id="statBar"></div>
+
+  <div id="view-map">
+    <div class="chips" id="chips"></div>
+    <div id="mapwrap"><svg id="usmap" viewBox="0 0 960 600"></svg></div>
+    <table id="roomTable"><thead><tr><th>Room</th><th>City/St</th><th>Status</th><th>Region</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div id="view-rooms" style="display:none">
+    <table><thead><tr><th>Room</th><th>City</th><th>St</th><th>Status</th><th>Contact</th><th>Website</th></tr></thead><tbody id="roomsFull"></tbody></table>
+  </div>
+
+  <div id="view-bookers" style="display:none">
+    <table><thead><tr><th>Name</th><th>Category</th><th>City</th><th>Phone</th><th>Email</th><th>Note</th></tr></thead><tbody id="bookersBody"></tbody></table>
+  </div>
+
+  <div id="view-sponsors" style="display:none">
+    <table><thead><tr><th>Sponsor</th><th>Category</th><th>City</th><th>Note</th></tr></thead><tbody id="sponsorsBody"></tbody></table>
+  </div>
+
+  <div id="view-gaps" style="display:none">
+    <h2 style="color:var(--gold)">What's actually wrong with this, no spin</h2>
+    <div class="gap"><b>Coverage.</b> 18 verified venues in Supabase right now, all sourced from your own binder/Gmail history. That is a fraction of the Improv/Funny Bone/Comedy Zone/Helium/Live Nation footprint nationwide. Everything past these 18 is unverified and NOT in this build — a ~124-room seed list exists from chain location pages but was never confirmed room-by-room, so it's deliberately left out rather than shown as fake-verified.</div>
+    <div class="gap"><b>No cruise ship, USO, or college booker contacts.</b> None exist in your Supabase contacts table yet. This was asked for explicitly and is not built — needs real sourcing (cruise line entertainment offices, Armed Forces Entertainment / USO booking contacts, NACA-affiliated college agents), not invented names.</div>
+    <div class="gap"><b>No coordinates in the data.</b> The `venues` table has no lat/lng columns. The 18 pins on this map are placed from hand-entered city centroids I added in this file, not from the database — if a venue's city is wrong or ambiguous, the pin will be wrong. Add lat/lng columns to `public.venues` to fix this at the source.</div>
+    <div class="gap"><b>No demographic/audience-lean tagging.</b> You asked for Black/white/Mexican/mainstream-room context per market. That field doesn't exist in the schema (`intel` is free text and only touches this occasionally). Needs a real column and real per-room judgment calls — not guessed.</div>
+    <div class="gap"><b>No after-party spot data, no per-market sponsor-to-venue linking.</b> `sponsor_index` (118 rows) is a flat citywide list, not tied to specific rooms or dates.</div>
+    <div class="gap"><b>GitHub: there was no Comedy Atlas repo before this deploy.</b> Across 46 repos in your account, none were the Atlas — closest adjacent ones are <span class="code">billo-blast-room</span> (Supabase+Netlify sending platform) and <span class="code">bse-dashboards</span> (public dashboard showcase). This build creates a real repo instead of leaving the Atlas living only as a claude.ai artifact with no version history.</div>
+    <div class="gap"><b>Security fix applied.</b> `public.venues`, `public.contacts`, and `public.sponsor_index` had Row Level Security ON with zero policies — meaning even you, reading through the anon key this site uses, would've gotten empty results. Added read-only SELECT policies so the live site works. Two unrelated tables (`honeycomb_roster`, `hive_backend`) have RLS fully OFF and are wide open to the anon key — not touched here since they're outside this project's scope, but that's a real exposure you should close.</div>
+    <div class="gap"><b>How it grows.</b> This page pulls live from Supabase on every load. Add or edit a row in <span class="code">public.venues</span>, <span class="code">public.contacts</span>, or <span class="code">public.sponsor_index</span> and it shows up here on refresh — no redeploy needed. Writing is not exposed to the public page (read-only anon key); you add data through Supabase directly or by asking me to.</div>
+  </div>
+
+</main>
+<aside>
+  <div class="dossier" id="dossier">
+    <h3>Select a room</h3>
+    <div class="field"><div>Click a pin or row for full detail — contact, how-you-know-them, and intel notes pulled straight from your own history.</div></div>
+  </div>
+</aside>
+</div>
+<div class="footer-note" style="padding:0 22px 20px">Data source: Supabase project <span class="code">BSE BLAST ROOM</span> · read-only live feed · built for Billy Sorrells Entertainment LLC</div>
+
+<script>
+const SUPABASE_URL = "https://esvaccfuejgpzuergklk.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzdmFjY2Z1ZWpncHp1ZXJna2xrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3OTY5MDYsImV4cCI6MjEwNDM3MjkwNn0.emwaAEhfNTLtVDM7j6onmAza5mr4Ds3k3oZWXIpBwtI";
+
+// Hand-entered centroids for known venue cities (schema has no lat/lng — see Gap Audit tab)
+const CITY_COORDS = {
+  "Hoover|AL":[33.4,-86.8],"Denver|CO":[39.74,-104.99],"Washington|DC":[38.9,-77.03],
+  "Atlanta|GA":[33.75,-84.39],"Baltimore|MD":[39.29,-76.61],"Timonium|MD":[39.45,-76.6],
+  "Charlotte|NC":[35.23,-80.84],"Philadelphia|PA":[39.95,-75.16],"Arlington|TX":[32.74,-97.11],
+  "Austin|TX":[30.27,-97.74],"Dallas|TX":[32.78,-96.8],"Houston|TX":[29.76,-95.37],
+  "McAllen|TX":[26.2,-98.23]
+};
+function project(lat,lon){
+  // simple equirectangular projection over continental US bbox onto 960x600 viewBox
+  const minLat=24.5, maxLat=49.5, minLon=-125, maxLon=-66.9;
+  const x = (lon-minLon)/(maxLon-minLon) * 900 + 30;
+  const y = (1-(lat-minLat)/(maxLat-minLat)) * 540 + 20;
+  return [x,y];
+}
+const STATUS_COLOR = {played:"#3fae5c",warm:"#E8A33D",pitch:"#c14b4b",open:"#4a9fce",unclear:"#666"};
+
+let VENUES=[], CONTACTS=[], SPONSORS=[];
+let activeFilters = new Set();
+
+async function sb(table, select="*"){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${select}`, {
+    headers:{apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`}
+  });
+  if(!r.ok) throw new Error(table+" "+r.status);
+  return r.json();
+}
+
+async function loadAll(){
+  const statusEl = document.getElementById('liveStatus');
+  try{
+    [VENUES, CONTACTS, SPONSORS] = await Promise.all([
+      sb('venues'), sb('contacts'), sb('sponsor_index')
+    ]);
+    statusEl.textContent = `● live — ${VENUES.length} rooms / ${CONTACTS.length} contacts / ${SPONSORS.length} sponsors`;
+    statusEl.style.color = "#3fae5c";
+  }catch(e){
+    statusEl.textContent = "● offline — Supabase fetch failed";
+    statusEl.style.color = "#c14b4b";
+    console.error(e);
+  }
+  render();
+}
+
+function render(){
+  renderStats();
+  renderChips();
+  renderMap();
+  renderRoomTable();
+  renderRoomsFull();
+  renderBookers();
+  renderSponsors();
+}
+
+function renderStats(){
+  const counts = {};
+  VENUES.forEach(v=>counts[v.play_status]=(counts[v.play_status]||0)+1);
+  const bar = document.getElementById('statBar');
+  bar.innerHTML = "";
+  const order = ["played","warm","pitch","open","unclear"];
+  order.forEach(k=>{
+    if(!counts[k]) return;
+    const d=document.createElement('div'); d.className='stat';
+    d.innerHTML = `<div class="n">${counts[k]}</div><div class="l">${k}</div>`;
+    bar.appendChild(d);
+  });
+  const d2=document.createElement('div'); d2.className='stat';
+  d2.innerHTML = `<div class="n">${CONTACTS.length}</div><div class="l">contacts</div>`;
+  bar.appendChild(d2);
+  const d3=document.createElement('div'); d3.className='stat';
+  d3.innerHTML = `<div class="n">${SPONSORS.length}</div><div class="l">sponsors</div>`;
+  bar.appendChild(d3);
+}
+
+function renderChips(){
+  const statuses = [...new Set(VENUES.map(v=>v.play_status))];
+  const box = document.getElementById('chips');
+  box.innerHTML = "";
+  statuses.forEach(s=>{
+    const c=document.createElement('div');
+    c.className='chip'+(activeFilters.has(s)?' on':'');
+    c.textContent = s;
+    c.onclick = ()=>{ activeFilters.has(s)?activeFilters.delete(s):activeFilters.add(s); render(); };
+    box.appendChild(c);
+  });
+}
+
+function filteredVenues(){
+  if(activeFilters.size===0) return VENUES;
+  return VENUES.filter(v=>activeFilters.has(v.play_status));
+}
+
+function renderMap(){
+  const svg = document.getElementById('usmap');
+  svg.innerHTML = `<rect x="0" y="0" width="960" height="600" fill="#0c0c0f"/>
+    <text x="480" y="30" text-anchor="middle" fill="#333" font-size="14">CONTINENTAL US — VERIFIED ROOMS ONLY (see Gap Audit)</text>`;
+  filteredVenues().forEach(v=>{
+    const key = `${v.city}|${v.state}`;
+    const coord = CITY_COORDS[key];
+    if(!coord) return;
+    const [x,y] = project(coord[0], coord[1]);
+    const color = STATUS_COLOR[v.play_status]||"#888";
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","pin");
+    g.setAttribute("transform",`translate(${x},${y})`);
+    g.innerHTML = `<circle r="6" fill="${color}"/><text x="9" y="4">${v.name}</text>`;
+    g.onclick = ()=>showDossier(v);
+    svg.appendChild(g);
+  });
+}
+
+function renderRoomTable(){
+  const tbody = document.querySelector('#roomTable tbody');
+  tbody.innerHTML = "";
+  filteredVenues().forEach(v=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${v.name}</td><td>${v.city}, ${v.state}</td><td><span class="badge b-${v.play_status}">${v.play_status}</span></td><td>${v.region||''}</td>`;
+    tr.onclick = ()=>showDossier(v);
+    tbody.appendChild(tr);
+  });
+}
+
+function renderRoomsFull(){
+  const tbody = document.getElementById('roomsFull');
+  tbody.innerHTML = "";
+  VENUES.forEach(v=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${v.name}</td><td>${v.city}</td><td>${v.state}</td>
+      <td><span class="badge b-${v.play_status}">${v.play_status}</span></td>
+      <td>${v.email||v.phone||''}</td>
+      <td>${v.website?`<a href="${v.website}" target="_blank">site</a>`:''}</td>`;
+    tr.onclick = ()=>showDossier(v);
+    tbody.appendChild(tr);
+  });
+}
+
+function renderBookers(){
+  const tbody = document.getElementById('bookersBody');
+  tbody.innerHTML = "";
+  CONTACTS.slice(0,500).forEach(c=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${c.name||''}</td><td>${c.category||''}</td><td>${c.city||''}</td><td>${c.phone||''}</td><td>${c.email||''}</td><td>${c.note||''}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderSponsors(){
+  const tbody = document.getElementById('sponsorsBody');
+  tbody.innerHTML = "";
+  SPONSORS.forEach(s=>{
+    const tr = document.createElement('tr');
+    const name = s.name || s.sponsor || s.company || Object.values(s)[0];
+    tr.innerHTML = `<td>${name||''}</td><td>${s.category||''}</td><td>${s.city||''}</td><td>${s.note||s.notes||''}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function showDossier(v){
+  const d = document.getElementById('dossier');
+  d.innerHTML = `
+    <h3>${v.name}</h3>
+    <div class="field"><label>Location</label><div>${v.address||''} ${v.city}, ${v.state} ${v.zip||''}</div></div>
+    <div class="field"><label>Status</label><div><span class="badge b-${v.play_status}">${v.play_status}</span> · listed ${v.status||''}</div></div>
+    <div class="field"><label>Contact</label><div>${v.phone||''}<br>${v.email||''}<br>${v.website?`<a href="${v.website}" target="_blank">${v.website}</a>`:''}</div></div>
+    <div class="field"><label>How I know them</label><div>${v.how_i_know||'—'}</div></div>
+    <div class="field"><label>Intel</label><div>${v.intel||'—'}</div></div>
+  `;
+}
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    ['map','rooms','bookers','sponsors','gaps'].forEach(id=>{
+      document.getElementById('view-'+id).style.display = (id===t.dataset.tab)?'':'none';
+    });
+  };
+});
+
+loadAll();
+</script>
+</body>
+</html>
